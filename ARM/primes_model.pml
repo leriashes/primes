@@ -9,8 +9,8 @@
 #define W0 cpu[currentCPU].w0
 #define W1 cpu[currentCPU].w1
 #define W8 cpu[currentCPU].w8
-#define W29 cpu[currentCPU].w29
-#define W30 cpu[currentCPU].w30
+#define W9 cpu[currentCPU].w9
+#define W10 cpu[currentCPU].w10
 
 #define FLAGZ cpu[currentCPU].flag_z
 #define FLAGN cpu[currentCPU].flag_n
@@ -19,13 +19,13 @@ typedef CPU {
     int ip;
     int sp;
     int x29, x30;
-    int w0, w1, w8, w29, w30;
+    int w0, w1, w8, w9, w10;
 
     bit flag_z;
     bit flag_n;
 };
 
-CPU cpu [MAXCPU];
+CPU cpu[MAXCPU];
 int memory[MAXMEM / 4];
 
 //Разные типы аргументов a, b: 
@@ -42,7 +42,7 @@ inline subs_rrr(a, b, c) {
     atomic { 
         a = b - c; 
         FLAGZ = a == 0;
-        FLAGS = a < 0;
+        FLAGN = a < 0;
     }
 }
 
@@ -59,19 +59,19 @@ inline sdiv_rrr(a, b, c) {
 }
 
 inline stur_rm(a, b) { 
-    atomic { a = memory[(b) / 4]; }
+    atomic { memory[(b) / 4] = a; }
 }
 
 inline str_rm(a, b) { 
-    atomic { a = memory[(b) / 4]; }
+    atomic { memory[(b) / 4] = a; }
 }
 
 inline ldur_rm(a, b) { 
-    atomic { memory[(b) / 4] = a; }
+    atomic { a = memory[(b) / 4]; }
 }
 
 inline ldr_rm(a, b) { 
-    atomic { memory[(b) / 4] = a; }
+    atomic { a = memory[(b) / 4]; }
 }
 
 inline mov_rc(a, b) { 
@@ -97,11 +97,11 @@ proctype cpuProc(int currentCPU) {
         ::(IP == 5) -> { stur_rm(W1, X29 - 8); NEXT_INSTRUCTION(); }
         ::(IP == 6) -> { ldur_rm(W8, X29 - 4); NEXT_INSTRUCTION(); }
         ::(IP == 7) -> { stur_rm(W8, X29 - 12); NEXT_INSTRUCTION(); }
-        ::(IP == 8) -> { IP = 8; } //b LBB1_1
+        ::(IP == 8) -> { IP = 9; } //b LBB1_1
         //LBB1_1
         ::(IP == 9) -> { ldur_rm(W8, X29 - 12); NEXT_INSTRUCTION(); }
         ::(IP == 10) -> { ldur_rm(W9, X29 - 8); NEXT_INSTRUCTION(); }
-        ::(IP == 11) -> { subs(W8, W8, W9); NEXT_INSTRUCTION(); }
+        ::(IP == 11) -> { subs_rrr(W8, W8, W9); NEXT_INSTRUCTION(); }
         ::(IP == 12) -> { atomic {if ::(FLAGZ == 0 && FLAGN == 0) -> IP = 52; :: else -> NEXT_INSTRUCTION(); fi } }//b.gt LBB1_12
         ::(IP == 13) -> { IP = 14; } //b LBB1_2
         //LBB1_2
@@ -116,7 +116,7 @@ proctype cpuProc(int currentCPU) {
         //LBB1_3
         ::(IP == 22) -> { ldr_rm(W8, SP + 8); NEXT_INSTRUCTION(); }
         ::(IP == 23) -> { ldr_rm(W9, SP + 16); NEXT_INSTRUCTION(); }
-        ::(IP == 24) -> { subs(W8, W8, W9); NEXT_INSTRUCTION(); }
+        ::(IP == 24) -> { subs_rrr(W8, W8, W9); NEXT_INSTRUCTION(); }
         ::(IP == 25) -> { atomic {if ::(FLAGZ == 0 && FLAGN == 0) -> IP = 41; :: else -> NEXT_INSTRUCTION(); fi } } //b.gt LBB1_8
         ::(IP == 26) -> { IP = 27; } //b LBB1_4
         //LBB1_4
@@ -164,8 +164,8 @@ proctype cpuProc(int currentCPU) {
 active proctype main() {
 
     //изначальное распределение состояния, когда на двух процессорах работают две параллельные задачи
-    cpu[0].sp = MAXMEM / 2;
-    cpu[1].sp = MAXMEM;
+    cpu[0].sp = 0;
+    cpu[1].sp = MAXMEM / 2;
 
     //1 ищет числа от 1 до 10000
     cpu[0].w0 = 1;
