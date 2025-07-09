@@ -53,76 +53,104 @@ memory[(b >> 24) & 0xff] = (a >> 24) & 0xff;
 //cm = const, memory (то же самое как register, memory тк берется просто значение)
 
 inline movl_rm(a, b) { 
-    atomic { memory[(b) / 4] = a; }
+    atomic { memory[(b) / 4] = a; 
+    //printf("CPU %d VALUE RM %d...\n", currentCPU, a);
+    }
 }
 
 inline movl_rr(a, b) { 
-    atomic { b = a; }
+    atomic { b = a; 
+    //printf("CPU %d VALUE RR %d...\n", currentCPU, b);
+    }
 }
 
 inline movl_mr(a, b) { 
-    atomic { b = memory[(a) / 4]; }
+    atomic { b = memory[(a) / 4]; 
+    //printf("CPU %d VALUE MR %d...\n", currentCPU, b);
+    }
 }
 
 inline movl_cm(a, b) { 
-    atomic { memory[(b) / 4] = a; }
+    atomic { memory[(b) / 4] = a; 
+    //printf("CPU %d VALUE CM %d...\n", currentCPU, b);
+    }
 }
 
 inline shrl(a, b) { 
-    atomic { b = b << a; }
+    atomic { b = b >> a; 
+    //printf("CPU %d SHRL VALUE %d...\n", currentCPU, b);
+    }
 }
 
 inline addl(a, b) {
-    atomic { b = a + b; }
+    atomic { b = a + b; 
+    //printf("CPU %d ADDL VALUE %d...\n", currentCPU, b);
+    }
 }
 
 inline addl_cm(a, b) {
-    atomic { memory[b / 4] = a + memory[b / 4]; }
+    atomic { memory[(b) / 4] = a + memory[(b) / 4]; 
+    //printf("CPU %d ADDL_CM VALUE %d...\n", currentCPU, memory[(b) / 4]);
+    }
 }
 
 inline sarl(a) {
-    atomic { a = a >> 1; }
+    atomic { a = a >> 1; 
+    //printf("CPU %d SARL VALUE %d...\n", currentCPU, a);
+    }
 }
 
 //Расширение eax в edx:eax (для деления)
 inline cltd() {
-    atomic { EDX = EAX; }
+    atomic { EDX = EAX; 
+    //printf("CPU %d CLTD VALUE %d...\n", currentCPU, EDX);
+    }
 }
 
 //Делим a (edx:eax) на b 
 inline idivl(b) {
-    atomic { EAX = EAX % memory[(b) / 4]; EDX = EDX / memory[(b) / 4];}
+    atomic { 
+        EAX = EAX / memory[(b) / 4]; 
+        EDX = EDX % memory[(b) / 4]; 
+        //printf("CPU %d IDIV VALUES -> div = %d, mod = %d...\n", currentCPU, EAX, EDX);
+    }
 }
 
 inline testl(a, b) {
     atomic {
-        FLAGZ = ((a) & (b) == 0);
-        FLAGS = ((a) & (b) < 0);
+        FLAGZ = (((a) & (b)) == 0);
+        FLAGS = (((a) & (b)) < 0);
+        //printf("CPU %d TESTL VALUES %d & %d -> FZ = %d, FS = %d...\n", currentCPU, a, b, FLAGZ, FLAGS);
     }
 }
 
 inline cmpl_mr(a, b) {
     atomic {
-        FLAGZ = (memory[(a) / 4] == b);
-        FLAGS = (memory[(a) / 4]  < b);
+        FLAGZ = (b == memory[(a) / 4]);
+        FLAGS = (b < memory[(a) / 4]);
+        //printf("CPU %d CMPL_MR VALUES MEM (2) %d  REG (1) %d, %d, %d...\n", currentCPU, memory[(a) / 4], b, FLAGZ, FLAGS);
     }
 }
 
 inline cmpl_rm(a, b) {
     atomic {
-        FLAGZ = (a == memory[(b) / 4]);
-        FLAGS = (a < memory[(b) / 4]);
+        FLAGZ = (memory[(b) / 4] == a);
+        FLAGS = (memory[(b) / 4] < a);
+
+       // printf("CPU %d CMPL_RM VALUES %d, %d, REG %d MEM %d...\n", currentCPU, FLAGZ, FLAGS, a, memory[(b) / 4]);
     }
 }
 
 inline NEXT_INSTRUCTION() {
     atomic {
-        printf("CPU %d go to instruction %d...\n", currentCPU, IP);
         IP++;
+        printf("CPU %d go to instruction %d...\n", currentCPU, IP);
     }
 }
 
 proctype cpuProc(int currentCPU) {
+    IP = 1;
+
     do
         //::(IP == 1) -> { pushq(cpu[currentCPU].rbp); IP++; }
         ::(IP == 1) -> {movl_rr(RSP, RBP); /*movq(rsp, rbp)*/; IP = 4; }
@@ -148,7 +176,7 @@ proctype cpuProc(int currentCPU) {
         ::(IP == 20) -> {idivl(-12 + RBP); NEXT_INSTRUCTION()}
         ::(IP == 21) -> {movl_rr(EDX, EAX); NEXT_INSTRUCTION()}
         ::(IP == 22) -> {testl(EAX, EAX); NEXT_INSTRUCTION()}
-        ::(IP == 23) -> {atomic {if ::(FLAGZ == 0) -> IP = 26; else -> NEXT_INSTRUCTION(); fi}};//jne .L5
+        ::(IP == 23) -> {atomic {if ::(FLAGZ == 0) -> IP = 26; :: else -> NEXT_INSTRUCTION(); fi}};//jne .L5
         ::(IP == 24) -> {movl_cm(0, -8 + RBP); NEXT_INSTRUCTION()}
         ::(IP == 25) -> {IP = 30};//jmp .L6
         //.L5:
@@ -156,20 +184,20 @@ proctype cpuProc(int currentCPU) {
         //.L4:
         ::(IP == 27) -> {movl_mr(-12 + RBP, EAX); NEXT_INSTRUCTION()}
         ::(IP == 28) -> {cmpl_mr(-16 + RBP, EAX); NEXT_INSTRUCTION()}
-        ::(IP == 29) -> {atomic {if ::(FLAGZ == 0 || FLAGS == 1)  -> IP = 18; else -> NEXT_INSTRUCTION(); fi}}//jle .L7
+        ::(IP == 29) -> {atomic {if ::(FLAGZ == 1 || FLAGS == 1)  -> IP = 18; :: else -> NEXT_INSTRUCTION(); fi}}//jle .L7
         //.L6:
-        ::(IP == 30) -> {cmpl_rm(0, -8 + RBP); IP++;}
-        ::(IP == 31) -> {atomic {if ::(FLAGZ == 1)  -> IP = 35; else -> NEXT_INSTRUCTION() fi}} //je .L8
+        ::(IP == 30) -> {cmpl_rm(0, -8 + RBP); NEXT_INSTRUCTION();}
+        ::(IP == 31) -> {atomic {if ::(FLAGZ == 1) -> IP = 35; :: else -> NEXT_INSTRUCTION() fi}} //je .L8
         ::(IP == 32) -> {movl_mr(-4 + RBP, EAX); NEXT_INSTRUCTION() };
         ::(IP == 33) -> {movl_rr(EAX, EDI); NEXT_INSTRUCTION()}
-        ::(IP == 34) -> {printf("Found prime: %d", EDI); NEXT_INSTRUCTION()} //call process_prime
+        ::(IP == 34) -> {printf("-------------------------------- Found prime: %d\n", EDI); NEXT_INSTRUCTION()} //call process_prime
         //.L8:
         ::(IP == 35) -> {addl_cm(1, -4 + RBP); NEXT_INSTRUCTION()}
         //.L3:
         ::(IP == 36) -> {movl_mr(-4 + RBP, EAX); NEXT_INSTRUCTION()}
         ::(IP == 37) -> {cmpl_mr(-24 + RBP, EAX); NEXT_INSTRUCTION()}
-        ::(IP == 38) -> {atomic {if ::(FLAGZ == 0)  -> IP = 9; else -> NEXT_INSTRUCTION() fi}} //jle .L9
-        ::(IP == 39) -> printf("Task for CPU %d done!\n", currentCPU);
+        ::(IP == 38) -> {atomic {if ::(FLAGZ == 1 || FLAGS == 1) -> IP = 9; :: else -> NEXT_INSTRUCTION() fi}} //jle .L9
+        ::(IP == 39) -> printf("Task for CPU %d done!\n", currentCPU); break;
         //nop
         //nop
         //leave
@@ -180,11 +208,11 @@ proctype cpuProc(int currentCPU) {
 }
 
 
-proctype sched() {
-    do
-        ::true -> printf("selecting something (cpu, task, ...)") 
-    od
-}
+// proctype sched() {
+//     do
+//         ::true -> printf("selecting something (cpu, task, ...)") 
+//     od
+// }
 
 active proctype main() {
 
@@ -205,8 +233,8 @@ active proctype main() {
 
 }
 
-proctype interrupt_gen() {
-    do
-        ::true -> printf("selecting something") 
-    od
-}
+// proctype interrupt_gen() {
+//     do
+//         ::true -> printf("selecting something") 
+//     od
+// }
