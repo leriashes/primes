@@ -1,0 +1,190 @@
+CPU 0 THREAD 0 ---------------------- Found prime: 1
+          
+CPU 0 THREAD 0 ---------------------- Found prime: 2
+              
+CPU 1 THREAD 5 ---------------------- Found prime: 1
+          
+CPU 0 THREAD 0 ---------------------- Found prime: 3
+          
+CPU 0 THREAD 2 ---------------------- Found prime: 1
+              
+CPU 1 THREAD 5 ---------------------- Found prime: 2
+          
+CPU 0 THREAD 2 ---------------------- Found prime: 2
+          
+CPU 0 THREAD 0 ---------------------- Found prime: 5
+              
+CPU 1 THREAD 5 ---------------------- Found prime: 3
+          
+CPU 0 THREAD 2 ---------------------- Found prime: 3
+          
+CPU 0 THREAD 0 ---------------------- Found prime: 7
+              
+CPU 1 THREAD 5 ---------------------- Found prime: 5
+          
+CPU 0 THREAD 2 ---------------------- Found prime: 5
+          
+CPU 0 THREAD 0 ---------------------- Found prime: 11
+          
+CPU 0 THREAD 2 ---------------------- Found prime: 7
+              
+CPU 1 THREAD 5 ---------------------- Found prime: 7
+          
+CPU 0 THREAD 0 ---------------------- Found prime: 13
+              
+CPU 1 THREAD 3 ---------------------- Found prime: 101
+          
+CPU 0 THREAD 0 ---------------------- Found prime: 17
+          
+CPU 0 THREAD 2 ---------------------- Found prime: 11
+          
+CPU 0 THREAD 1 ---------------------- Found prime: 53
+              
+CPU 1 THREAD 5 ---------------------- Found prime: 11
+              
+CPU 1 THREAD 4 ---------------------- Found prime: 53
+          
+CPU 0 THREAD 0 ---------------------- Found prime: 19
+              
+CPU 1 THREAD 5 ---------------------- Found prime: 13
+          
+CPU 0 THREAD 2 ---------------------- Found prime: 13
+          
+CPU 0 THREAD 0 ---------------------- Found prime: 23
+              
+CPU 1 THREAD 3 ---------------------- Found prime: 103
+              
+CPU 1 THREAD 5 ---------------------- Found prime: 17
+          
+CPU 0 THREAD 2 ---------------------- Found prime: 17
+          
+CPU 0 THREAD 0 ---------------------- Found prime: 29
+          
+CPU 0 THREAD 2 ---------------------- Found prime: 19
+          
+CPU 0 THREAD 0 ---------------------- Found prime: 31
+              
+CPU 1 THREAD 5 ---------------------- Found prime: 19
+              
+CPU 1 THREAD 4 ---------------------- Found prime: 59
+          
+CPU 0 THREAD 1 ---------------------- Found prime: 59
+              
+CPU 1 THREAD 3 ---------------------- Found prime: 107
+          
+CPU 0 THREAD 0 ---------------------- Found prime: 37
+          
+CPU 0 THREAD 2 ---------------------- Found prime: 23
+              
+CPU 1 THREAD 5 ---------------------- Found prime: 23
+          
+CPU 0 THREAD 0 ---------------------- Found prime: 41
+              
+CPU 1 THREAD 4 ---------------------- Found prime: 61
+              
+CPU 1 THREAD 3 ---------------------- Found prime: 109
+          
+CPU 0 THREAD 1 ---------------------- Found prime: 61
+          
+CPU 0 THREAD 0 ---------------------- Found prime: 43
+              
+CPU 1 THREAD 5 ---------------------- Found prime: 29
+          
+CPU 0 THREAD 2 ---------------------- Found prime: 29
+          
+CPU 0 THREAD 0 ---------------------- Found prime: 47
+              
+CPU 1 THREAD 5 ---------------------- Found prime: 31
+          Task 0 for CPU 0 done!
+          
+CPU 0 THREAD 2 ---------------------- Found prime: 31
+              
+CPU 1 THREAD 3 ---------------------- Found prime: 113
+          
+CPU 0 THREAD 1 ---------------------- Found prime: 67
+              
+CPU 1 THREAD 4 ---------------------- Found prime: 67
+          
+CPU 0 THREAD 1 ---------------------- Found prime: 71
+              
+CPU 1 THREAD 5 ---------------------- Found prime: 37
+          
+CPU 0 THREAD 1 ---------------------- Found prime: 73
+          
+CPU 0 THREAD 2 ---------------------- Found prime: 37
+          
+CPU 0 THREAD 1 ---------------------- Found prime: 79
+              
+CPU 1 THREAD 4 ---------------------- Found prime: 71
+              
+CPU 1 THREAD 5 ---------------------- Found prime: 41
+              
+CPU 1 THREAD 3 ---------------------- Found prime: 127
+          
+CPU 0 THREAD 2 ---------------------- Found prime: 41
+          
+CPU 0 THREAD 1 ---------------------- Found prime: 83
+              
+CPU 1 THREAD 5 ---------------------- Found prime: 43
+          
+CPU 0 THREAD 1 ---------------------- Found prime: 89
+          
+CPU 0 THREAD 2 ---------------------- Found prime: 43
+              
+CPU 1 THREAD 4 ---------------------- Found prime: 73
+              
+CPU 1 THREAD 3 ---------------------- Found prime: 131
+          
+CPU 0 THREAD 1 ---------------------- Found prime: 97
+          Task 1 for CPU 0 done!
+          
+CPU 0 THREAD 2 ---------------------- Found prime: 47
+              
+CPU 1 THREAD 5 ---------------------- Found prime: 47
+          Task 2 for CPU 0 done!
+          
+
+!!! CPU 0 DONE !!!
+
+              Task 2 for CPU 1 done!
+              
+CPU 1 THREAD 3 ---------------------- Found prime: 137
+              
+CPU 1 THREAD 4 ---------------------- Found prime: 79
+              
+CPU 1 THREAD 3 ---------------------- Found prime: 139
+              
+CPU 1 THREAD 3 ---------------------- Found prime: 149
+              
+CPU 1 THREAD 4 ---------------------- Found prime: 83
+              
+CPU 1 THREAD 3 ---------------------- Found prime: 151
+              
+CPU 1 THREAD 3 ---------------------- Found prime: 157
+              
+CPU 1 THREAD 4 ---------------------- Found prime: 89
+              
+CPU 1 THREAD 3 ---------------------- Found prime: 163
+              
+CPU 1 THREAD 3 ---------------------- Found prime: 167
+              
+CPU 1 THREAD 4 ---------------------- Found prime: 97
+              
+CPU 1 THREAD 3 ---------------------- Found prime: 173
+              Task 1 for CPU 1 done!
+              
+CPU 1 THREAD 3 ---------------------- Found prime: 179
+              
+CPU 1 THREAD 3 ---------------------- Found prime: 181
+              
+CPU 1 THREAD 3 ---------------------- Found prime: 191
+              
+CPU 1 THREAD 3 ---------------------- Found prime: 193
+              
+CPU 1 THREAD 3 ---------------------- Found prime: 197
+              
+CPU 1 THREAD 3 ---------------------- Found prime: 199
+              Task 0 for CPU 1 done!
+              
+
+!!! CPU 1 DONE !!!
