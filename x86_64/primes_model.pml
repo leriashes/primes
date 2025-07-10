@@ -1,20 +1,23 @@
-//mtype:current_proc = {primes, process_prime}
-
 #define MAXCPU 2
+#define MAXTHREADS 6
 #define MAXMEM 100
 
-#define IP cpu[currentCPU].ip
-#define EDI cpu[currentCPU].edi
-#define ESI cpu[currentCPU].esi
-#define RBP cpu[currentCPU].rbp
-#define RSP cpu[currentCPU].rsp
-#define EAX cpu[currentCPU].eax
-#define EDX cpu[currentCPU].edx
-#define FLAGZ cpu[currentCPU].flag_z
-#define FLAGS cpu[currentCPU].flag_s
+#define IP cpu[currentCPU].context.ip
+#define EDI cpu[currentCPU].context.edi
+#define ESI cpu[currentCPU].context.esi
+#define RBP cpu[currentCPU].context.rbp
+#define RSP cpu[currentCPU].context.rsp
+#define EAX cpu[currentCPU].context.eax
+#define EBX cpu[currentCPU].context.ebx
+#define ECX cpu[currentCPU].context.ecx
+#define EDX cpu[currentCPU].context.edx
+#define FLAGZ cpu[currentCPU].context.flag_z
+#define FLAGS cpu[currentCPU].context.flag_s
 
+#define T cpu[currentCPU].currentThread
+#define THREAD thread[T]
 
-typedef CPU {
+typedef CONTEXT {
     int ip;
     int rsp;
     int rbp;
@@ -26,11 +29,17 @@ typedef CPU {
     int esi;
     bit flag_z;
     bit flag_s;
+    bit finished;
 };
 
+typedef CPU {
+    int currentThread;
+    CONTEXT context;
+};
 
+CONTEXT thread[MAXTHREADS * MAXCPU];
 CPU cpu[MAXCPU];
-int memory[MAXMEM / 4];
+int memory[MAXMEM / 4 * 3];
 
 /*
 если использовать память побайтово, то не эффективно: 
@@ -144,14 +153,14 @@ inline cmpl_rm(a, b) {
 inline NEXT_INSTRUCTION() {
     atomic {
         IP++;
-        printf("CPU %d go to instruction %d...\n", currentCPU, IP);
+        printf("CPU %d THREAD %d go to instruction %d...\n", currentCPU, T, IP);
     }
 }
 
-proctype cpuProc(int currentCPU) {
-    IP = 1;
-
-    do
+inline cpuProc(currentCPU) {
+    //IP = 1;
+    //printf("here\n\n");
+    if
         //::(IP == 1) -> { pushq(cpu[currentCPU].rbp); IP++; }
         ::(IP == 1) -> { movl_rr(RSP, RBP); /*movq(rsp, rbp)*/; IP = 4; }
         //::(IP == 3) -> { subq(32, rsp); IP++; }
@@ -190,47 +199,139 @@ proctype cpuProc(int currentCPU) {
         ::(IP == 31) -> { atomic {if ::(FLAGZ == 1) -> IP = 35; :: else -> NEXT_INSTRUCTION(); fi } } //je .L8
         ::(IP == 32) -> { movl_mr(-4 + RBP, EAX); NEXT_INSTRUCTION(); }
         ::(IP == 33) -> { movl_rr(EAX, EDI); NEXT_INSTRUCTION(); }
-        ::(IP == 34) -> { printf("-------------------------------- Found prime: %d\n", EDI); NEXT_INSTRUCTION(); } //call process_prime
+        ::(IP == 34) -> { printf("\nCPU %d THREAD %d ---------------------- Found prime: %d\n", currentCPU, T, EDI); NEXT_INSTRUCTION(); } //call process_prime
         //.L8:
         ::(IP == 35) -> { addl_cm(1, -4 + RBP); NEXT_INSTRUCTION(); }
         //.L3:
         ::(IP == 36) -> { movl_mr(-4 + RBP, EAX); NEXT_INSTRUCTION(); }
         ::(IP == 37) -> { cmpl_mr(-24 + RBP, EAX); NEXT_INSTRUCTION(); }
         ::(IP == 38) -> { atomic {if ::(FLAGZ == 1 || FLAGS == 1) -> IP = 9; :: else -> NEXT_INSTRUCTION() fi } } //jle .L9
-        ::(IP == 39) -> { printf("Task for CPU %d done!\n", currentCPU); break; }
+        ::(IP == 39) -> { printf("Task %d for CPU %d done!\n", T - startThread, currentCPU); thread[cpu[currentCPU].currentThread].finished = true; }//break; }
+        
         //nop
         //nop
         //leave
         //.cfi_def_cfa 7, 8
         //ret
         //.cfi_endproc
-    od
+    fi;
 }
 
+inline save_context(lastThread) {
+    atomic {
+        thread[lastThread].ip = IP;
+        thread[lastThread].rsp = RSP;
+        thread[lastThread].rbp = RBP;
+        thread[lastThread].eax = EAX;
+        thread[lastThread].ebx = EBX;
+        thread[lastThread].ecx = ECX;
+        thread[lastThread].edx = EDX;
+        thread[lastThread].edi = EDI;
+        thread[lastThread].esi = ESI;
+        thread[lastThread].flag_z = FLAGZ;
+        thread[lastThread].flag_s = FLAGS;
+    }
+}
 
-// proctype sched() {
-//     do
-//         ::true -> printf("selecting something (cpu, task, ...)") 
-//     od
-// }
+inline load_context(currentCPU) {
+    atomic {
+        IP = THREAD.ip;
+        RSP = THREAD.rsp;
+        RBP = THREAD.rbp
+        EAX = THREAD.eax;
+        EBX = THREAD.ebx;
+        ECX = THREAD.ecx;
+        EDX = THREAD.edx;
+        EDI = THREAD.edi;
+        ESI = THREAD.esi;
+        FLAGZ = THREAD.flag_z;
+        FLAGS = THREAD.flag_s;
+    }
+}
+
+proctype scheduler(int currentCPU, startThread) {
+    do
+        :: {
+                int lastThread = T;
+
+                if 
+                    :: !thread[startThread].finished -> T = startThread;
+                    :: !thread[startThread + 1].finished -> T = startThread + 1;
+                    :: !thread[startThread + 2].finished -> T = startThread + 2;
+                    :: else -> { printf("\n\n!!! CPU %d DONE !!!\n\n", currentCPU); break; }
+                fi;
+
+                atomic {
+                    //if :: (lastThread != T) -> printf(" Scheduler: CPU %d SWITCHED to thread: %d!", currentCPU, T - startThread); 
+                    //   :: else -> 
+                        //printf(" Scheduler: CPU %d thread: %d!", currentCPU, T);
+                    // ; fi;
+                    save_context(lastThread);
+                    load_context(currentCPU);
+                    
+                    cpuProc(currentCPU);
+                }
+
+            };
+    od
+}
 
 active proctype main() {
 
     //изначальное распределение состояния, когда на двух процессорах работают две параллельные задачи
-    cpu[0].rsp = MAXMEM / 2;
-    cpu[1].rsp = MAXMEM;
+    thread[0].rsp = MAXMEM / 2;
+    thread[1].rsp = MAXMEM;
+    thread[2].rsp = MAXMEM / 2 + MAXMEM;
 
-    //1 ищет числа от 1 до 10000
-    cpu[0].edi = 1;
-    cpu[0].esi = 10000;
+    //1 ищет числа от 1 до 50
+    thread[0].edi = 1;
+    thread[0].esi = 50;
 
-    //2 ищет числа от 10001 до 20000
-    cpu[1].edi = 10001;
-    cpu[1].esi = 20000;
+    //2 ищет числа от 51 до 100
+    thread[1].edi = 51;
+    thread[1].esi = 100;
 
-    run cpuProc(0);
-    run cpuProc(1);
+    //3 ищет числа от 1 до 50
+    thread[2].edi = 1;
+    thread[2].esi = 50;
 
+    thread[3].rsp = MAXMEM * 2;
+    thread[4].rsp = MAXMEM * 2 + MAXMEM / 2;
+
+    thread[5].rsp = MAXMEM * 3;
+
+
+    //1 ищет числа от 101 до 200
+    thread[3].edi = 101;
+    thread[3].esi = 200;
+
+    //2 ищет числа от 51 до 100
+    thread[4].edi = 51;
+    thread[4].esi = 100;
+
+    //3 ищет числа от 1 до 50
+    thread[5].edi = 1;
+    thread[5].esi = 50;
+
+    thread[0].ip = 1;
+    thread[1].ip = 1;
+    thread[2].ip = 1;
+
+    thread[3].ip = 1;
+    thread[4].ip = 1;
+    thread[5].ip = 1;
+
+    cpu[0].currentThread = 0;
+    load_context(0);
+
+    cpu[1].currentThread = 3;
+    load_context(1);
+
+
+    run scheduler(0, 0);
+    run scheduler(1, 3);
+    //run cpuProc(0);
+    //run cpuProc(1);
 }
 
 // proctype interrupt_gen() {
