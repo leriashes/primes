@@ -17,6 +17,7 @@
 
 #define T cpu[currentCPU].currentThread
 #define THREAD thread[T]
+#define IDLE_THREAD MAXTHREADS * MAXCPU
 
 typedef CONTEXT {
     int ip;
@@ -39,9 +40,15 @@ typedef CPU {
     bit finished;
 };
 
-CONTEXT thread[MAXTHREADS * MAXCPU];
+CONTEXT thread[MAXTHREADS * MAXCPU + 1];
+
+int idle_ticks[MAXCPU];
+int total_ticks[MAXCPU];
+
 CPU cpu[MAXCPU];
 int memory[MAXMEM / 4 * 3];
+
+int ready = 0;
 
 /*
 если использовать память побайтово, то не эффективно: 
@@ -152,6 +159,10 @@ inline cmpl_rm(a, b) {
     }
 }
 
+inline nop() {
+    skip;
+}
+
 inline NEXT_INSTRUCTION() {
     atomic {
         IP++;
@@ -171,27 +182,27 @@ proctype cpuProc(int currentCPU) {
                 //::(IP == 1) -> { pushq(cpu[currentCPU].rbp); IP++; }
                 ::(IP == 1) -> { movl_rr(RSP, RBP); /*movq(rsp, rbp)*/; IP = 4; }
                 //::(IP == 3) -> { subq(32, rsp); IP++; }
-        ::(IP == 4) -> { movl_rm(EDI, -20 + RBP); NEXT_INSTRUCTION(); }
-        ::(IP == 5) -> { movl_rm(ESI, -24 + RBP); NEXT_INSTRUCTION(); }
-        ::(IP == 6) -> { movl_mr(-20 + RBP, EAX); NEXT_INSTRUCTION(); }
-        ::(IP == 7) -> { movl_rm(EAX, -4 + RBP); NEXT_INSTRUCTION(); }
+                ::(IP == 4) -> { movl_rm(EDI, -20 + RBP); NEXT_INSTRUCTION(); }
+                ::(IP == 5) -> { movl_rm(ESI, -24 + RBP); NEXT_INSTRUCTION(); }
+                ::(IP == 6) -> { movl_mr(-20 + RBP, EAX); NEXT_INSTRUCTION(); }
+                ::(IP == 7) -> { movl_rm(EAX, -4 + RBP); NEXT_INSTRUCTION(); }
                 ::(IP == 8) -> { IP = 36; }//jmp .L3
                 //.L9:
-        ::(IP == 9) -> { movl_mr(-4 + RBP, EAX); NEXT_INSTRUCTION(); }
-        ::(IP == 10) -> { movl_rr(EAX, EDX); NEXT_INSTRUCTION(); }
-        ::(IP == 11) -> { shrl(31, EDX); NEXT_INSTRUCTION(); } 
-        ::(IP == 12) -> { addl(EDX, EAX); NEXT_INSTRUCTION(); }
-        ::(IP == 13) -> { sarl(EAX); NEXT_INSTRUCTION(); }
-        ::(IP == 14) -> { movl_rm(EAX, -16 + RBP); NEXT_INSTRUCTION(); }
-        ::(IP == 15) -> { movl_cm(1, -8 + RBP); NEXT_INSTRUCTION(); }
-        ::(IP == 16) -> { movl_cm(2, -12 + RBP); NEXT_INSTRUCTION(); }
+                ::(IP == 9) -> { movl_mr(-4 + RBP, EAX); NEXT_INSTRUCTION(); }
+                ::(IP == 10) -> { movl_rr(EAX, EDX); NEXT_INSTRUCTION(); }
+                ::(IP == 11) -> { shrl(31, EDX); NEXT_INSTRUCTION(); } 
+                ::(IP == 12) -> { addl(EDX, EAX); NEXT_INSTRUCTION(); }
+                ::(IP == 13) -> { sarl(EAX); NEXT_INSTRUCTION(); }
+                ::(IP == 14) -> { movl_rm(EAX, -16 + RBP); NEXT_INSTRUCTION(); }
+                ::(IP == 15) -> { movl_cm(1, -8 + RBP); NEXT_INSTRUCTION(); }
+                ::(IP == 16) -> { movl_cm(2, -12 + RBP); NEXT_INSTRUCTION(); }
                 ::(IP == 17) -> { IP = 27; }//jmp .L4
                 //.L7:
-        ::(IP == 18) -> { movl_mr(-4 + RBP, EAX); NEXT_INSTRUCTION(); }
-        ::(IP == 19) -> { cltd(); NEXT_INSTRUCTION(); }
-        ::(IP == 20) -> { idivl(-12 + RBP); NEXT_INSTRUCTION(); }
-        ::(IP == 21) -> { movl_rr(EDX, EAX); NEXT_INSTRUCTION(); }
-        ::(IP == 22) -> { testl(EAX, EAX); NEXT_INSTRUCTION(); }
+                ::(IP == 18) -> { movl_mr(-4 + RBP, EAX); NEXT_INSTRUCTION(); }
+                ::(IP == 19) -> { cltd(); NEXT_INSTRUCTION(); }
+                ::(IP == 20) -> { idivl(-12 + RBP); NEXT_INSTRUCTION(); }
+                ::(IP == 21) -> { movl_rr(EDX, EAX); NEXT_INSTRUCTION(); }
+                ::(IP == 22) -> { testl(EAX, EAX); NEXT_INSTRUCTION(); }
                 ::(IP == 23) -> { atomic {if ::(FLAGZ == 0) -> IP = 26; :: else -> NEXT_INSTRUCTION(); fi } } //jne .L5
                 ::(IP == 24) -> { movl_cm(0, -8 + RBP); NEXT_INSTRUCTION(); }
                 ::(IP == 25) -> { IP = 30; } //jmp .L6
@@ -215,6 +226,8 @@ proctype cpuProc(int currentCPU) {
                 ::(IP == 38) -> { atomic {if ::(FLAGZ == 1 || FLAGS == 1) -> IP = 9; :: else -> NEXT_INSTRUCTION() fi } } //jle .L9
                 ::(IP == 39) -> { if :: !THREAD.finished -> printf("Task %d for CPU %d done!\n", T, currentCPU); THREAD.finished = true; :: else -> ; fi }//break; }
                 :: (FINISH) -> break;
+
+                :: (IP == 1000) -> { nop(); };
                 //nop
                 //nop
                 //leave
@@ -267,8 +280,18 @@ proctype scheduler(int currentCPU, startThread) {
                     :: !thread[startThread].finished -> currentThread = startThread;
                     :: !thread[startThread + 1].finished -> currentThread = startThread + 1;
                     :: !thread[startThread + 2].finished -> currentThread = startThread + 2;
-                    :: else -> { printf("\n\n!!! CPU %d DONE !!!\n\n", currentCPU); FINISH = true; break; }
+                    :: else -> { 
+                        atomic {
+                            if :: currentThread != IDLE_THREAD -> printf("\n\n!!! CPU %d DONE !!!\n\n", currentCPU); ready++; 
+                            :: else -> ;
+                            fi; 
+                        }
+                        idle_ticks[currentCPU]++;
+                        currentThread = IDLE_THREAD;
+                    } 
                 fi;
+
+                total_ticks[currentCPU]++;
 
                 atomic {
                     //if :: (currentThread != T) -> printf("Scheduler: CPU %d SWITCHED to thread: %d!", currentCPU, T - startThread); 
@@ -280,20 +303,27 @@ proctype scheduler(int currentCPU, startThread) {
                     load_context(currentCPU);
                 }
 
+                FINISH = ready == MAXCPU;
+
+                if :: (ready == MAXCPU) -> FINISH = true; printf("CPU %d: %d%%\n", currentCPU, 100 - idle_ticks[currentCPU] * 100 / total_ticks[currentCPU]); break;
+                :: else -> ;
+                fi;
             };
     od
 }
 
 active proctype main() {
 
+    thread[IDLE_THREAD].ip = 1000;
+
     //изначальное распределение состояния, когда на двух процессорах работают две параллельные задачи
     thread[0].rsp = MAXMEM / 2;
     thread[1].rsp = MAXMEM;
     thread[2].rsp = MAXMEM / 2 + MAXMEM;
 
-    //1 ищет числа от 1 до 50
-    thread[0].edi = 1;
-    thread[0].esi = 50;
+    //1 ищет числа от 100 до 500
+    thread[0].edi = 100;
+    thread[0].esi = 500;
 
     //2 ищет числа от 51 до 100
     thread[1].edi = 51;
