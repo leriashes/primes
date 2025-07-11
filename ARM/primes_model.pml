@@ -1,5 +1,5 @@
 #define MAXCPU 2
-#define MAXTHREADS 6 
+#define MAXTHREADS 3
 #define MAXMEM 100
 
 #define WZR 0
@@ -59,9 +59,9 @@ inline sub_rrc(a, b, c) {
     atomic { a = b - c; }
 }
 
-inline subs_rrr(a, b, c) { 
+inline subs_rrr(a, b, d) { 
     atomic { 
-        a = b - c; 
+        a = b - d; 
         FLAGZ = a == 0;
         FLAGN = a < 0;
     }
@@ -71,12 +71,12 @@ inline add_rrc(a, b, c) {
     atomic { a = b + c; }
 }
 
-inline mul_rrr(a, b, c) { 
-    atomic { a = b * c; }
+inline mul_rrr(a, b, d) { 
+    atomic { a = b * d; }
 }
 
-inline sdiv_rrr(a, b, c) { 
-    atomic { a = b / c; }
+inline sdiv_rrr(a, b, d) { 
+    atomic { a = b / d; }
 }
 
 inline stur_rm(a, b) { 
@@ -106,7 +106,7 @@ inline nop() {
 inline NEXT_INSTRUCTION() {
     atomic {
         IP++;
-        printf("CPU %d THREAD %d go to instruction %d...\n", currentCPU, T, IP);
+        //printf("CPU %d THREAD %d go to instruction %d...\n", currentCPU, T, IP);
     }
 }
 
@@ -248,9 +248,9 @@ proctype scheduler(int currentCPU, startThread) {
 
                 atomic {
                     //if :: (currentThread != T) -> printf(" Scheduler: CPU %d SWITCHED to thread: %d!", currentCPU, T - startThread); 
-                    //   :: else -> 
+                      // :: else -> 
                         //printf(" Scheduler: CPU %d thread: %d!", currentCPU, T);
-                    // ; fi;
+                     //; fi;
                     save_context();
                     T = currentThread;
                     load_context(currentCPU);
@@ -270,9 +270,9 @@ active proctype main() {
     thread[IDLE_THREAD].ip = 1000;
 
     //изначальное распределение состояния, когда на двух процессорах работают две параллельные задачи
-    thread[0].sp = MAXMEM / 2;
-    thread[1].sp = MAXMEM;
-    thread[2].sp = MAXMEM / 2 + MAXMEM;
+    thread[0].sp = 0
+    thread[1].sp = MAXMEM / 2;
+    thread[2].sp = MAXMEM;
 
     //1 ищет числа от 100 до 500
     thread[0].w0 = 100;
@@ -286,9 +286,9 @@ active proctype main() {
     thread[2].w0 = 1;
     thread[2].w1 = 50;
 
-    thread[3].sp = MAXMEM * 2;
-    thread[4].sp = MAXMEM * 2 + MAXMEM / 2;
-    thread[5].sp = MAXMEM * 3;
+    thread[3].sp = MAXMEM / 2 + MAXMEM;
+    thread[4].sp = MAXMEM * 2;
+    thread[5].sp = MAXMEM * 2 + MAXMEM / 2;
 
 
     //1 ищет числа от 101 до 200
