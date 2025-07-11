@@ -274,9 +274,9 @@ active proctype main() {
     thread[1].sp = MAXMEM / 2;
     thread[2].sp = MAXMEM;
 
-    //1 ищет числа от 100 до 500
-    thread[0].w0 = 100;
-    thread[0].w1 = 500;
+    //1 ищет числа от 10 до 50
+    thread[0].w0 = 10;
+    thread[0].w1 = 50;
 
     //2 ищет числа от 51 до 100
     thread[1].w0 = 51;
